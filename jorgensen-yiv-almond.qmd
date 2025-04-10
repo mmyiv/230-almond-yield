@@ -1,0 +1,49 @@
+---
+title: "Almond Yield"
+author: "Bailey Jørgensen and Michelle Yiv"
+format: html
+editor: visual
+---
+
+# Implementing a simple model of almond yield anomaly response due to climate
+
+The Lobell et at. 2006 paper contains a table that is the source for our transfer function that we will use in our model:
+
+```{r include-graphics, echo=FALSE, out.width='50%'}
+library(here)
+library(tidyverse)
+# Use knitr to include graphic of table with equation we are using
+knitr::include_graphics(here("table2.png"))
+```
+
+
+NOTE: 
+when we use the mean minimum temperature, the output stats should be: 
+
+- max: 1919.98
+- min: -0.35
+- mean: 181.44
+
+## Here is a diagram showing our *inputs*, *outputs*, and *parameters*:
+
+```{r include-graphics, echo=FALSE, out.width='50%'}
+# Use knitr to embed the drawn diagram that we create
+```
+
+
+```{r}
+# Read in data
+data <- read.table("clim.txt", header = TRUE, sep = " ", stringsAsFactors = FALSE)
+```
+
+```{r}
+monthly_data <- data |> 
+  group_by(month, year) |> 
+  summarize(avg_tmax_c = mean(tmax_c),
+            avg_tmin_c = mean(tmin_c),
+            avg_precip = mean(precip))
+```
+
+
+
+
