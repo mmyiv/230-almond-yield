@@ -32,18 +32,27 @@ when we use the mean minimum temperature, the output stats should be:
 
 
 ```{r}
-# Read in data
-data <- read.table("clim.txt", header = TRUE, sep = " ", stringsAsFactors = FALSE)
+# Read in data for use in the analysis
+daily_data <- read.table("clim.txt", header = TRUE, sep = " ", stringsAsFactors = FALSE)
+
+# Source the function
+source("almond-function.R")
 ```
+
 
 ```{r}
-monthly_data <- data |> 
-  group_by(month, year) |> 
-  summarize(avg_tmax_c = mean(tmax_c),
-            avg_tmin_c = mean(tmin_c),
-            avg_precip = mean(precip))
+# Call the function
+result <- almond_yield(daily_data)
+
+# Print the results
+print(result)
 ```
 
+**TEST ANSWER**
+the maximum almond yield anomaly should be approximately *1920 ton/acre*
+the lowest almond yield anomaly should be approximately *-0.027 ton/acre*
+the mean almond yield anomaly should be approximately *182 ton/acre*
 
 
+Yay! Our function works!
 
