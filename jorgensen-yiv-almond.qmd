@@ -16,20 +16,19 @@ library(tidyverse)
 knitr::include_graphics(here("table2.png"))
 ```
 
+NOTE: when we use the mean minimum temperature, the output stats should be:
 
-NOTE: 
-when we use the mean minimum temperature, the output stats should be: 
-
-- max: 1919.98
-- min: -0.35
-- mean: 181.44
+-   max: 1919.98
+-   min: -0.35
+-   mean: 181.44
 
 ## Here is a diagram showing our *inputs*, *outputs*, and *parameters*:
 
 ```{r include-graphics, echo=FALSE, out.width='50%'}
 # Use knitr to embed the drawn diagram that we create
-```
 
+knitr::include_graphics("diagram.png")
+```
 
 ```{r}
 # Read in data for use in the analysis
@@ -39,7 +38,6 @@ daily_data <- read.table("clim.txt", header = TRUE, sep = " ", stringsAsFactors 
 source("almond-function.R")
 ```
 
-
 ```{r}
 # Call the function
 result <- almond_yield(daily_data)
@@ -48,11 +46,6 @@ result <- almond_yield(daily_data)
 print(result)
 ```
 
-**TEST ANSWER**
-the maximum almond yield anomaly should be approximately *1920 ton/acre*
-the lowest almond yield anomaly should be approximately *-0.027 ton/acre*
-the mean almond yield anomaly should be approximately *182 ton/acre*
-
+**TEST ANSWER** the maximum almond yield anomaly should be approximately *1920 ton/acre* the lowest almond yield anomaly should be approximately *-0.027 ton/acre* the mean almond yield anomaly should be approximately *182 ton/acre*
 
 Yay! Our function works!
-
