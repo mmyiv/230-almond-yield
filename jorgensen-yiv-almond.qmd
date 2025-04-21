@@ -9,9 +9,13 @@ editor: visual
 
 The Lobell et at. 2006 paper contains a table that is the source for our transfer function that we will use in our model:
 
-```{r include-graphics, echo=FALSE, out.width='50%'}
+```{r}
+# Load libraries
 library(here)
 library(tidyverse)
+```
+
+```{r include-graphics, echo=FALSE, out.width='50%'}
 # Use knitr to include graphic of table with equation we are using
 knitr::include_graphics(here("table2.png"))
 ```
@@ -24,7 +28,7 @@ NOTE: when we use the mean minimum temperature, the output stats should be:
 
 ## Here is a diagram showing our *inputs*, *outputs*, and *parameters*:
 
-```{r include-graphics, echo=FALSE, out.width='50%'}
+```{r}
 # Use knitr to embed the drawn diagram that we create
 
 knitr::include_graphics("diagram.png")

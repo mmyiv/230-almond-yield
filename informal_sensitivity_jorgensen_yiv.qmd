@@ -1,0 +1,138 @@
+---
+title: "Informal Sensitivity Analysis of Almond Yield Profit"
+author: "Bailey Jørgensen and Michelle Yiv"
+format: html
+editor: visual
+---
+
+## Load libraries
+
+```{r}
+library(tidyverse)
+library(here)
+library(purrr)
+```
+
+## Read in data and source functions
+
+```{r}
+# Read in data for use in the analysis
+daily_data <- read.table("clim.txt", header = TRUE, sep = " ", stringsAsFactors = FALSE)
+
+# Source the function
+source("almond_profit.R")
+source("applied_profit_yield.R")
+```
+
+## Run model
+
+```{r}
+# Use default parameters to run model
+applied_profit_yield(daily_data)
+```
+
+## Informal Sensitivity analysis
+
+```{r}
+# Define deviation and baseline valyes for production cost and almond price/ton
+
+deviation <- 0.12
+base_production_cost <- 4000
+base_almond_price_ton <- 8000
+```
+
+```{r}
+# Generate random values using uniform distribution. Assumed as we don't know variation
+
+production_cost_samples <- runif(
+  min = base_production_cost - deviation * base_production_cost,
+  max = base_production_cost + deviation * base_production_cost, n = 40
+)
+
+
+almond_price_ton_samples <- runif(
+  min = base_almond_price_ton - deviation * base_almond_price_ton,
+  max = base_almond_price_ton + deviation * base_almond_price_ton, n = 40
+)
+
+# Now place samples in df
+parms <- cbind.data.frame(production_cost = production_cost_samples, almond_price_ton = almond_price_ton_samples)
+```
+
+```{r}
+# Apply function using pmap
+results <- parms %>% 
+  pmap(function(production_cost, almond_price_ton) {
+  applied_profit_yield(
+    daily_data,
+    production_cost = production_cost,
+    almond_price_ton = almond_price_ton
+  )
+})
+```
+
+```{r}
+# Mismatch with row numbers, fix using rep
+
+# Extract results with the correct parameters
+yearly_results <- map_df(1:nrow(parms), function(i) {
+  # Apply a row in parms to results
+  result <- results[[i]]
+  
+  # Create a df that repeats params
+  data.frame(
+    year = rep(result$year, each = 1), # Repeat the years for each set
+    yield_anomaly = result$yield_anomaly,
+    profit = result$profit,
+    production_cost = rep(parms$production_cost[i], length(result$year)), 
+    almond_price_ton = rep(parms$almond_price_ton[i], length(result$year)) 
+  )
+})
+
+# Show the first few rows of the final results
+head(yearly_results)
+```
+
+
+
+## Graphs
+
+- one that shows yield anomaly for each year, accounting for uncertainty in the parameters\
+- one that show how yield anomaly in general varies with your parameters
+
+```{r}
+# Yield anomaly by year
+ggplot(yearly_results, aes(x = year, 
+                          y = yield_anomaly, 
+                          color = as.factor(production_cost))) +
+  geom_line() + 
+  labs(title = "Yield Anomaly Over Years by Production Cost",
+       x = "Year", y = "Yield Anomaly (tons/acre)") + 
+  theme_minimal() +
+  theme(legend.position = "none") 
+
+```
+
+```{r}
+# Yield anomaly with parameters
+
+
+# Get unique combinations
+unique_data <- yearly_results %>%
+  select(production_cost, yield_anomaly, year, profit, almond_price_ton) %>%
+  distinct() %>%
+  arrange(production_cost)
+
+ggplot(unique_data, aes(x = production_cost, y = yield_anomaly)) +
+  geom_line(color = "steelblue", size = 1) +
+  geom_point(color = "steelblue") +
+  labs(
+    title = "Yield Anomaly vs Production Cost",
+    x = "Production Cost ($/acre)",
+    y = "Yield Anomaly (tons/acre)"
+  ) +
+  theme_minimal()
+
+
+
+```
