@@ -32,10 +32,9 @@ almond_yield <- function(daily_data, Tn1 = -0.015, Tn2 = -0.0046, P1 = -0.07, P2
   climate_data <- climate_data %>%
     mutate(yield = Tn1 * feb_min_t + Tn2 * feb_min_t^2 + P1 * jan_p + P2 * jan_p^2 + i)
   
-  # Return max, min, and mean yields
-  return(list(
-    maxyield = max(climate_data$yield, na.rm = TRUE),
-    minyield = min(climate_data$yield, na.rm = TRUE),
-    meanyield = mean(climate_data$yield, na.rm = TRUE)
-  ))
+  # yields
+  df = data.frame(climate_data$year, yield) %>% 
+    rename(year = 'almond_data.year')
+  
+  return(df) 
 }

@@ -21,118 +21,160 @@ daily_data <- read.table("clim.txt", header = TRUE, sep = " ", stringsAsFactors 
 
 # Source the function
 source("almond_profit.R")
-source("applied_profit_yield.R")
 ```
 
 ## Run model
 
 ```{r}
 # Use default parameters to run model
-applied_profit_yield(daily_data)
+almond_result <- almond_profit(daily_data)
 ```
 
 ## Informal Sensitivity analysis
 
+
 ```{r}
-# Define deviation and baseline valyes for production cost and almond price/ton
+# Define deviation and baseline values for production cost and almond price/ton
 
 deviation <- 0.12
+nsamples = 100
 base_production_cost <- 4000
-base_almond_price_ton <- 8000
-```
+base_price <- 5000
 
-```{r}
-# Generate random values using uniform distribution. Assumed as we don't know variation
+# Generate samples using uniform distribution. Assumed as we don't know variation
 
 production_cost_samples <- runif(
   min = base_production_cost - deviation * base_production_cost,
-  max = base_production_cost + deviation * base_production_cost, n = 40
+  max = base_production_cost + deviation * base_production_cost, n = nsamples
 )
 
 
-almond_price_ton_samples <- runif(
-  min = base_almond_price_ton - deviation * base_almond_price_ton,
-  max = base_almond_price_ton + deviation * base_almond_price_ton, n = 40
+almond_price_samples <- runif(
+  min = base_price - deviation * base_price,
+  max = base_price + deviation * base_price, n = nsamples
 )
 
 # Now place samples in df
-parms <- cbind.data.frame(production_cost = production_cost_samples, almond_price_ton = almond_price_ton_samples)
+parms <- cbind.data.frame(production_cost = production_cost_samples, price = almond_price_samples)
 ```
 
 ```{r}
 # Apply function using pmap
 results <- parms %>% 
-  pmap(function(production_cost, almond_price_ton) {
-  applied_profit_yield(
-    daily_data,
-    production_cost = production_cost,
-    almond_price_ton = almond_price_ton
-  )
-})
+  pmap(function(production_cost, price) {
+    almond_profit(
+      price = price,
+      production_cost = production_cost
+    )
+  })
 ```
 
 ```{r}
-# Mismatch with row numbers, fix using rep
+# Combine all result data frames into one long data frame
+results_df <- map_df(results, bind_rows, .id = "run") %>%
+  mutate(run = as.integer(run))
 
-# Extract results with the correct parameters
-yearly_results <- map_df(1:nrow(parms), function(i) {
-  # Apply a row in parms to results
-  result <- results[[i]]
-  
-  # Create a df that repeats params
-  data.frame(
-    year = rep(result$year, each = 1), # Repeat the years for each set
-    yield_anomaly = result$yield_anomaly,
-    profit = result$profit,
-    production_cost = rep(parms$production_cost[i], length(result$year)), 
-    almond_price_ton = rep(parms$almond_price_ton[i], length(result$year)) 
-  )
-})
+# Add run ID to parms
+parms <- parms %>%
+  mutate(run = row_number())
 
-# Show the first few rows of the final results
-head(yearly_results)
+# Join parameter values to the results
+sensitivity <- left_join(results_df, parms, by = "run")
 ```
-
 
 
 ## Graphs
 
-- one that shows yield anomaly for each year, accounting for uncertainty in the parameters\
+- one that shows yield anomaly for each year, accounting for uncertainty in the parameters
 - one that show how yield anomaly in general varies with your parameters
 
 ```{r}
 # Yield anomaly by year
-ggplot(yearly_results, aes(x = year, 
+ggplot(sensitivity, aes(x = year, 
                           y = yield_anomaly, 
-                          color = as.factor(production_cost))) +
+                          )) +
   geom_line() + 
-  labs(title = "Yield Anomaly Over Years by Production Cost",
+  labs(title = "Yield Anomaly Over Years",
        x = "Year", y = "Yield Anomaly (tons/acre)") + 
   theme_minimal() +
   theme(legend.position = "none") 
 
 ```
+```{r}
+# Yield anomaly by year
+ggplot(sensitivity, aes(x = year, 
+                          y = profit, 
+                          )) +
+  geom_line() + 
+  labs(title = "Profit by year",
+       x = "Year", y = " Profit($/acre)") + 
+  theme_minimal() +
+  theme(legend.position = "none") 
+```
 
 ```{r}
-# Yield anomaly with parameters
+# Get unique values for each run 
+unique_vals <- sensitivity %>%
+  select(run, mean_profit, production_cost) %>%
+  distinct()
 
-
-# Get unique combinations
-unique_data <- yearly_results %>%
-  select(production_cost, yield_anomaly, year, profit, almond_price_ton) %>%
-  distinct() %>%
-  arrange(production_cost)
-
-ggplot(unique_data, aes(x = production_cost, y = yield_anomaly)) +
-  geom_line(color = "steelblue", size = 1) +
-  geom_point(color = "steelblue") +
-  labs(
-    title = "Yield Anomaly vs Production Cost",
-    x = "Production Cost ($/acre)",
-    y = "Yield Anomaly (tons/acre)"
-  ) +
+# Now plot
+ggplot(unique_vals, aes(x = production_cost, y = mean_profit)) +
+  geom_point(size = 2, color = "pink") +
+  labs(x = "Production Cost ($/acre)",
+       y = "Mean Profit ($/acre)",
+       title = "Mean Profit vs Production Cost") +
   theme_minimal()
 
-
-
 ```
+```{r}
+# Same plot as above but as boxplot
+ggplot(unique_vals, aes(x = production_cost, y = mean_profit)) +
+  geom_boxplot() +
+  labs(x = "Production Cost ($/acre)",
+       y = "Mean Profit ($/acre)",
+       title = "Mean Profit vs Production Cost") +
+  theme_minimal()
+```
+
+
+```{r}
+# Plot price sensitivity
+ggplot(sensitivity, aes(x = price, y = mean_profit)) +
+  geom_point() +
+  labs(y = "Profit (dollar/acre)", 
+       x = "Price (dollar/ton)") +
+  theme_classic()
+```
+```{r}
+# Get unique values for each run 
+unique_vals <- sensitivity %>%
+  select(run, mean_yield_anomaly, production_cost) %>%
+  distinct()
+
+# Plot yield anomaly with production cost
+ggplot(unique_vals, aes(x = mean_yield_anomaly, y = production_cost)) +
+  geom_boxplot() +
+  labs(y = "Production cost ($/acre)", 
+       x = "Mean Yield Anomaly") +
+  theme_classic()
+```
+```{r}
+# Get unique values for each run 
+unique_vals <- sensitivity %>%
+  select(run, mean_yield_anomaly, price) %>%
+  distinct()
+
+# Plot yield anomaly with production cost
+ggplot(unique_vals, aes(x = mean_yield_anomaly, y = price)) +
+  geom_boxplot() +
+  labs(y = "Price", 
+       x = "Mean Yield Anomaly") +
+  theme_classic()
+```
+
+## Interpretation
+
+Looking at yield anomalies over the years, there is a large spike in 1995, with the next biggest spikes being similar in size in 2005 and 2008. These patterns are also seen when looking at profits over the years, although the scales are different. This indicates that these years were different from normal yields and saw favorable harvests. When looking at mean profit and production cost, the boxplot looks fairly equal, which can indicate that profit is not as sensitive to production cost.
+Now looking at price sensitivity (price vs mean profit), this plot makes sense as price of almonds/ton being sold increases, so does profit. This is a positive linear relationship, assuming that other parameters do not vary significantly. 
+Finally, we look at how our mean yield anomalies vary with our chosen parameters. The production cost boxplot has its lower quartile smaller than its upper quartile, meaning that there is positive or right skew. This means that most of the production costs fall in the lower range. The price boxplot appears to be fairly equal. The price per ton of almonds is relatively stable in this dataset, although that is likely due to how the sensitivity analysis was performed. Additionally, this also suggests that mean yield anomalies do not influence almond price per ton a lot. 
